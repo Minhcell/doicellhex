@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1620">
+<title>Tra Cell — Hex→Dec</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TraCell">
+<style>
+  :root{
+    --bg:#0E1620; --panel:#121C28; --inset:#0A111A; --line:#1E2C3C;
+    --ink:#E6EDF3; --muted:#7E94A8; --amber:#F5B023; --amber-soft:rgba(245,176,35,.12);
+    --green:#3DD68C;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    min-height:100dvh; line-height:1.45;
+    padding:max(18px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+    background-image:radial-gradient(120% 60% at 50% -10%, #16243380 0%, transparent 60%);
+  }
+  .wrap{max-width:520px;margin:0 auto}
+
+  /* header */
+  header{display:flex;align-items:center;gap:12px;margin:6px 2px 20px}
+  .glyph{width:40px;height:40px;flex:none}
+  h1{font-size:19px;font-weight:700;letter-spacing:.2px;margin:0}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  /* input */
+  .field{position:relative;margin-bottom:10px}
+  .field label{display:block;font-size:12px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:1.4px;margin:0 0 8px 2px;font-weight:600}
+  input{
+    width:100%; padding:16px 50px 16px 16px; font-family:var(--mono);
+    font-size:24px; letter-spacing:2px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder{color:#3c5066;letter-spacing:2px}
+  input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-soft)}
+  .clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    width:34px;height:34px;border:none;border-radius:9px;background:transparent;
+    color:var(--muted);font-size:20px;cursor:pointer;display:grid;place-items:center}
+  .clear:active{background:var(--line)}
+  .hint{font-size:12px;color:var(--muted);margin:2px 2px 22px}
+  .hint b{color:var(--amber);font-weight:600;cursor:pointer;font-family:var(--mono)}
+
+  /* results */
+  .results{display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:14px 14px 12px;transition:border-color .15s}
+  .card.primary{border-color:#2c3e52}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .tag{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-weight:600}
+  .tag .dot{width:7px;height:7px;border-radius:50%;background:var(--amber)}
+  .tag .n{color:var(--ink)}
+  .recommend{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--amber);
+    background:var(--amber-soft);padding:3px 8px;border-radius:999px}
+  .equation{font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    margin-bottom:8px;word-break:break-all}
+  .equation .hx{color:#9fd0ff}
+  .equation .ar{color:#46607a;padding:0 4px}
+
+  /* readout (the instrument display) */
+  .readout{display:flex;align-items:center;gap:10px;background:var(--inset);
+    border:1px solid var(--line);border-radius:12px;padding:12px 12px;cursor:pointer;
+    transition:background .15s,border-color .15s}
+  .readout:active{background:#0d1622}
+  .value{flex:1;font-family:var(--mono);font-size:clamp(22px,7vw,30px);
+    font-weight:600;color:var(--amber);letter-spacing:1px;word-break:break-all;
+    text-shadow:0 0 18px rgba(245,176,35,.22)}
+  .copybtn{flex:none;border:none;border-radius:10px;background:var(--amber);
+    color:#1a1205;font-weight:700;font-size:13px;padding:11px 15px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:background .15s,transform .05s}
+  .copybtn:active{transform:scale(.96)}
+  .copybtn svg{width:15px;height:15px}
+  .card.copied .copybtn{background:var(--green);color:#06251a}
+  .card.copied .readout{border-color:var(--green)}
+
+  .empty{color:#3c5066}
+
+  footer{margin-top:26px;font-size:11.5px;color:#54697e;line-height:1.6;
+    border-top:1px solid var(--line);padding-top:14px}
+  footer code{font-family:var(--mono);color:var(--muted)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg class="glyph" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect width="48" height="48" rx="11" fill="#121C28"/>
+      <path d="M24 13v22M16 35 24 13l8 22" stroke="#F5B023" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M20 24h8M18.5 29h11" stroke="#B48018" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M18 12a8 8 0 0 1 4-3M30 12a8 8 0 0 0-4-3" stroke="#F5B023" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="24" cy="12.5" r="1.8" fill="#F5B023"/>
+    </svg>
+    <div>
+      <h1>Tra Cell · Hex → Dec</h1>
+      <div class="sub">Nhập mã cell, lấy kết quả Dec để tra</div>
+    </div>
+  </header>
+
+  <div class="field">
+    <label for="inp">Mã cell gốc</label>
+    <input id="inp" inputmode="numeric" autocomplete="off" autocapitalize="off"
+           spellcheck="false" placeholder="006654611">
+    <button class="clear" id="clear" aria-label="Xóa">×</button>
+  </div>
+  <div class="hint">Ví dụ: <b id="demo">006654611</b> — bấm để thử</div>
+
+  <div class="results" id="results"></div>
+
+  <footer>
+    Quy tắc: tách phần đuôi → đổi Dec→Hex, ghép với phần đầu (đã đổi Hex) → đổi Hex→Dec.<br>
+    <b style="color:var(--amber)">Cách 3</b> đuôi 4 số, ghép thẳng · <b style="color:var(--amber)">Cách 2</b> đuôi 4 số, chèn <code>0</code> · <b style="color:var(--amber)">Cách 1</b> đuôi 5 số.
+  </footer>
+
+</div>
+
+<script>
+// ---- core conversion (BigInt, khớp đúng ví dụ) ----
+function convert(raw, suffixLen, sep){
+  const d = (raw||"").replace(/\D/g,"");
+  if(!d) return null;
+  const sStr = d.slice(-suffixLen);
+  const pStr = d.slice(0, d.length - suffixLen);
+  const suffix = BigInt(sStr || "0");
+  const prefix = BigInt(pStr || "0");
+  const hxS = suffix.toString(16).toUpperCase();
+  const hxP = prefix.toString(16).toUpperCase();
+  const combined = hxP + sep + hxS;
+  const result = BigInt("0x"+combined).toString(10);
+  return {hxP, hxS, sep, combined, result};
+}
+
+// thứ tự hiển thị: Cách 3, Cách 2, Cách 1
+const METHODS = [
+  {id:3, label:"Cách 3", suffixLen:4, sep:"",  recommend:true},
+  {id:2, label:"Cách 2", suffixLen:4, sep:"0", recommend:false},
+  {id:1, label:"Cách 1", suffixLen:5, sep:"",  recommend:false},
+];
+
+const results = document.getElementById('results');
+const inp = document.getElementById('inp');
+
+// build cards once
+METHODS.forEach((m,i)=>{
+  const card = document.createElement('div');
+  card.className = 'card' + (m.recommend ? ' primary':'');
+  card.dataset.idx = i;
+  card.innerHTML = `
+    <div class="card-top">
+      <span class="tag"><span class="dot"></span><span class="n">${m.label}</span>
+        <span style="color:#54697e">· đuôi ${m.suffixLen} số${m.sep?` · chèn 0`:''}</span></span>
+      ${m.recommend?'<span class="recommend">DÙNG TRƯỚC</span>':''}
+    </div>
+    <div class="equation"></div>
+    <div class="readout">
+      <span class="value empty">—</span>
+      <button class="copybtn">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="lbl">Copy</span>
+      </button>
+    </div>`;
+  results.appendChild(card);
+});
+const cards = [...results.children];
+
+function render(){
+  const raw = inp.value;
+  METHODS.forEach((m,i)=>{
+    const card = cards[i];
+    const eq = card.querySelector('.equation');
+    const val = card.querySelector('.value');
+    const r = convert(raw, m.suffixLen, m.sep);
+    if(!r){
+      eq.innerHTML = '';
+      val.textContent = '—';
+      val.classList.add('empty');
+      card.dataset.value = '';
+      return;
+    }
+    const mid = r.sep ? `<span class="ar">+</span><span class="hx">0</span>` : '';
+    eq.innerHTML =
+      `<span class="hx">${r.hxP||'0'}</span>${mid}` +
+      `<span class="ar">+</span><span class="hx">${r.hxS}</span>` +
+      `<span class="ar">→</span><span class="hx">${r.combined}</span>` +
+      `<span style="color:#54697e">₁₆</span>`;
+    val.textContent = r.result;
+    val.classList.remove('empty');
+    card.dataset.value = r.result;
+  });
+}
+
+// ---- copy (clipboard API + fallback cho file:// / context không bảo mật) ----
+async function copyText(t){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(t); return true;
+    }
+  }catch(e){}
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok=document.execCommand('copy'); ta.remove(); return ok;
+  }catch(e){ return false; }
+}
+
+function flashCopied(card){
+  const lbl = card.querySelector('.lbl');
+  card.classList.add('copied');
+  const old = lbl.textContent; lbl.textContent='Đã copy';
+  clearTimeout(card._t);
+  card._t = setTimeout(()=>{ card.classList.remove('copied'); lbl.textContent=old; }, 1300);
+}
+
+results.addEventListener('click', async (e)=>{
+  const card = e.target.closest('.card'); if(!card) return;
+  const onReadout = e.target.closest('.readout');
+  if(!onReadout) return;
+  const v = card.dataset.value;
+  if(!v) return;
+  if(await copyText(v)) flashCopied(card);
+});
+
+// ---- events ----
+inp.addEventListener('input', ()=>{
+  // chỉ giữ chữ số, giữ vị trí con trỏ ở cuối là đủ cho dán
+  const clean = inp.value.replace(/\D/g,'');
+  if(clean !== inp.value) inp.value = clean;
+  render();
+});
+document.getElementById('clear').addEventListener('click', ()=>{ inp.value=''; render(); inp.focus(); });
+document.getElementById('demo').addEventListener('click', ()=>{ inp.value='006654611'; render(); });
+
+render();
+
+// ---- service worker (offline) ----
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Tra Cell — Hex sang Dec",
+  "short_name": "TraCell",
+  "description": "Chuyen ma cell sang Dec theo 3 cach de tra cell. Hoat dong offline.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1620",
+  "theme_color": "#0E1620",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
